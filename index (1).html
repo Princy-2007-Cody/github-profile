@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prince — Field Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0e14;
+    --panel: #10151c;
+    --panel-alt: #141b26;
+    --border: #1e2733;
+    --teal: #4de8c2;
+    --amber: #ffb454;
+    --text: #e6edf3;
+    --muted: #7d8fa3;
+    --hot: #ff6b6b;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:
+      radial-gradient(ellipse 800px 500px at 15% -5%, rgba(77,232,194,0.07), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(255,180,84,0.05), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 60px 20px 80px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before{
+    content:"";
+    position: fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events:none;
+    mask-image: radial-gradient(ellipse 60% 50% at 50% 20%, black, transparent);
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+  .wrap{ max-width: 760px; margin: 0 auto; position:relative; }
+
+  /* stacked card effect, echoing a file-folder stack */
+  .stack{ position:relative; }
+  .stack::before, .stack::after{
+    content:"";
+    position:absolute; inset:0;
+    border:1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel-alt);
+  }
+  .stack::before{ transform: rotate(-1.2deg) translateY(6px); z-index:0; }
+  .stack::after{ transform: rotate(1deg) translateY(3px); z-index:0; opacity:0.7; }
+
+  .card{
+    position:relative; z-index:1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 40px 40px 44px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  @media (max-width: 600px){
+    .card{ padding: 28px 22px 32px; }
+    body{ padding: 36px 12px 60px; }
+  }
+
+  /* header / eyebrow badge */
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--amber);
+    border: 1px solid rgba(255,180,84,0.35);
+    background: rgba(255,180,84,0.06);
+    padding: 6px 12px 6px 10px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+  .dot{ width:6px; height:6px; border-radius:50%; background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  h1{
+    font-family:'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: clamp(28px, 5vw, 42px);
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .role{
+    margin-top: 6px;
+    color: var(--teal);
+    font-family:'JetBrains Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+  .role::before{ content:"// "; color: var(--muted); }
+
+  /* radar sweep signature element */
+  .radar{
+    position:absolute; top: -10px; right: 6px;
+    width: 84px; height: 84px;
+    opacity: 0.9;
+  }
+  .radar svg{ width:100%; height:100%; }
+  .sweep{ transform-origin: 50% 50%; animation: spin 4s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  @media (max-width:600px){ .radar{ display:none; } }
+
+  hr.rule{
+    border: none; height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+    margin: 28px 0;
+  }
+
+  /* info rows */
+  .info-grid{
+    display:grid; grid-template-columns: 150px 1fr;
+    row-gap: 13px; column-gap: 16px;
+    font-size: 14.5px;
+  }
+  .info-grid dt{
+    font-family:'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding-top: 2px;
+  }
+  .info-grid dd{ color: var(--text); }
+  .info-grid dd .tag{
+    display:inline-block; margin: 2px 6px 2px 0;
+    padding: 3px 9px;
+    font-family:'JetBrains Mono', monospace; font-size: 11.5px;
+    color: var(--teal); background: rgba(77,232,194,0.08);
+    border: 1px solid rgba(77,232,194,0.25); border-radius: 6px;
+  }
+
+  /* section label */
+  .section-label{
+    display:flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing:0.12em; text-transform:uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .section-label::after{ content:""; flex:1; height:1px; background: var(--border); }
+
+  /* mission cards */
+  .mission{
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .mission:hover{ border-color: rgba(77,232,194,0.4); transform: translateY(-2px); }
+  .mission-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .mission-title{ font-weight:600; font-size: 15.5px; }
+  .status{
+    font-family:'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing:0.08em;
+    text-transform:uppercase; padding: 3px 9px; border-radius: 999px;
+    white-space:nowrap; display:inline-flex; align-items:center; gap:6px;
+  }
+  .status.active{ color: var(--teal); background: rgba(77,232,194,0.08); border:1px solid rgba(77,232,194,0.3); }
+  .status.shipped{ color: var(--amber); background: rgba(255,180,84,0.08); border:1px solid rgba(255,180,84,0.3); }
+  .status .sdot{ width:5px; height:5px; border-radius:50%; background:currentColor; }
+  .mission p{ color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+  .mission .stat-line{
+    margin-top: 10px; font-family:'JetBrains Mono', monospace; font-size: 11.5px;
+    color: var(--teal); opacity: 0.85;
+  }
+
+  /* systems / skill scan strip */
+  .scan-strip{
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .chip{
+    font-family:'JetBrains Mono', monospace; font-size: 12px;
+    padding: 6px 11px; border-radius: 6px;
+    border: 1px solid var(--border); color: var(--text);
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* ground control / links */
+  .links{ display:flex; flex-wrap:wrap; gap:10px; }
+  .links a{
+    text-decoration:none; color: var(--text);
+    font-family:'JetBrains Mono', monospace; font-size: 13px;
+    border: 1px solid var(--border);
+    padding: 9px 14px; border-radius: 8px;
+    display:flex; align-items:center; gap:8px;
+    transition: all .2s ease;
+  }
+  .links a:hover{ border-color: var(--teal); color: var(--teal); background: rgba(77,232,194,0.06); }
+  .links a::before{ content: attr(data-glyph); }
+
+  footer{
+    text-align:center; margin-top: 30px;
+    color: var(--muted); font-size: 12px;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  a:focus-visible, button:focus-visible{ outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .dot, .sweep{ animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stack">
+    <div class="card">
+      <div class="radar" aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#1e2733" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="32" fill="none" stroke="#1e2733" stroke-width="1"/>
+          <circle cx="50" cy="50" r="16" fill="none" stroke="#1e2733" stroke-width="1"/>
+          <g class="sweep">
+            <path d="M50 50 L50 4 A46 46 0 0 1 88 28 Z" fill="url(#g)"/>
+          </g>
+          <circle cx="50" cy="50" r="2.5" fill="#4de8c2"/>
+          <defs>
+            <linearGradient id="g" x1="50" y1="4" x2="88" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#4de8c2" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="#4de8c2" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="eyebrow"><span class="dot"></span> Field Log · Transmission Live</div>
+
+      <h1>Prince</h1>
+      <div class="role">AI / ML Developer — Satellite Data &amp; Precision Agriculture</div>
+
+      <hr class="rule">
+
+      <dl class="info-grid">
+        <dt>Base</dt>
+        <dd>Bhubaneswar, Odisha, IN</dd>
+
+        <dt>Focus</dt>
+        <dd>
+          <span class="tag">Remote Sensing</span>
+          <span class="tag">ML Pipelines</span>
+          <span class="tag">Full-Stack Prototyping</span>
+        </dd>
+
+        <dt>Currently</dt>
+        <dd>Building for ISRO Bharatiya Antariksh Hackathon 2026</dd>
+
+        <dt>Signal</dt>
+        <dd>Open to hackathons, applied-AI collabs, and remote-sensing problems</dd>
+      </dl>
+
+      <hr class="rule">
+
+      <div class="section-label">Active Missions</div>
+
+      <div class="mission">
+        <div class="mission-top">
+          <div class="mission-title">Crop-Sense AI</div>
+          <div class="status active"><span class="sdot"></span>In Progress</div>
+        </div>
+        <p>Multi-source satellite data fusion (Sentinel-1/2, Landsat, MODIS, EOS-4) for crop classification, phenological mapping, and moisture-stress detection.</p>
+        <div class="stat-line">RF ~65% · LightGBM ~57% · top feature: amplitude_doy · 160 fields</div>
+      </div>
+
+      <div class="mission">
+        <div class="mission-top">
+          <div class="mission-title">TRIAGE</div>
+          <div class="status shipped"><span class="sdot"></span>Shipped</div>
+        </div>
+        <p>An AI productivity companion framed around an ER-triage metaphor — sorting your tasks the way a hospital sorts patients. Built as a self-contained web app.</p>
+      </div>
+
+      <hr class="rule">
+
+      <div class="section-label">Systems</div>
+      <div class="scan-strip">
+        <span class="chip">Python</span>
+        <span class="chip">Scikit-learn</span>
+        <span class="chip">LightGBM</span>
+        <span class="chip">JavaScript</span>
+        <span class="chip">HTML / CSS</span>
+        <span class="chip">Streamlit</span>
+        <span class="chip">Leaflet</span>
+        <span class="chip">Remote Sensing</span>
+      </div>
+
+      <hr class="rule">
+
+      <div class="section-label">Ground Control</div>
+      <div class="links">
+        <a href="https://github.com/" data-glyph="▸" target="_blank" rel="noopener">GitHub</a>
+        <a href="mailto:you@example.com" data-glyph="▸">Email</a>
+        <a href="https://linkedin.com/" data-glyph="▸" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </div>
+  </div>
+  <footer>// end of transmission</footer>
+</div>
+</body>
+</html>
